@@ -1,4 +1,5 @@
 import click
+import managedvault as mv
 
 
 @click.group()
@@ -7,15 +8,28 @@ def cli():
     "Vault Operations CLI"
 
 
-@cli.command(name="command")
-@click.argument(
-    "example"
-)
-@click.option(
-    "-o",
-    "--option",
-    help="An example option",
-)
-def first_command(example, option):
-    "Command description goes here"
-    click.echo("Here is some output")
+@cli.command()
+def show():
+    "Show the configuration"
+    click.echo(mv.config.vault_addr)
+    click.echo(mv.config.vault_token)
+    click.echo(mv.config.dblink)
+
+
+@cli.command()
+def status():
+    "List managed vaults"
+    vault = mv.ManagedVault()
+    click.echo("Verifying Vault connection  ...  ", nl=False)
+    if vault.secret_store_connected():
+        click.echo("Authenticated")
+    else:
+        click.echo("Error!")
+        
+    click.echo("Verifying SQLite connection  ...  ", nl=False)
+    if vault.data_store_connected():
+        click.echo("Connected")
+    else:
+        click.echo("Error!")
+        
+    

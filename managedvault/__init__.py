@@ -1,0 +1,1 @@
+from .managedvault import ManagedVault, config

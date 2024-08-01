@@ -1,0 +1,4 @@
+---
+  vault_addr: http://localhost:8200
+  vault_token: root
+  dblink: managed_vaults.db

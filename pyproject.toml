@@ -10,7 +10,9 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License"
 ]
 dependencies = [
-    "click"
+    "click",
+    "pyyaml",
+    "hvac[parser]"
 ]
 
 [project.urls]
@@ -18,6 +20,9 @@ Homepage = "https://github.com/alainchiasson/vopscli"
 Changelog = "https://github.com/alainchiasson/vopscli/releases"
 Issues = "https://github.com/alainchiasson/vopscli/issues"
 CI = "https://github.com/alainchiasson/vopscli/actions"
+
+[tool.setuptools]
+packages = ["vopscli", "managedvault"]
 
 [project.entry-points.console_scripts]
 vopscli = "vopscli.cli:cli"
