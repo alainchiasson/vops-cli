@@ -39,3 +39,9 @@ To run the tests:
 ```bash
 pytest
 ```
+
+
+For later, to clean up UUID in SQL.
+
+https://stackoverflow.com/questions/12952546/sqlite3-interfaceerror-error-binding-parameter-1-probably-unsupported-type
+

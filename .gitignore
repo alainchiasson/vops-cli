@@ -10,3 +10,5 @@ venv
 
 # Temp
 .github
+*.db
+vaults/data

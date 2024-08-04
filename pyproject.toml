@@ -12,7 +12,9 @@ classifiers = [
 dependencies = [
     "click",
     "pyyaml",
-    "hvac[parser]"
+    "hvac[parser]",
+    "uuid",
+    "sqlite3"
 ]
 
 [project.urls]
