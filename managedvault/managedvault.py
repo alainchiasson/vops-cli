@@ -178,11 +178,21 @@ class ManagedVault:
         
         db = self.vaults
         cursor = db.cursor()
-        sql = "SELECT id, shares, threshold, root_token, unseal_keys, recovery_keys FROM credentials WHERE id = ?"
+        sql = "SELECT id, shares, threshold FROM credentials WHERE id = ?"
+        # sql = "SELECT id, shares, threshold, root_token, unseal_keys, recovery_keys FROM credentials WHERE id = ?"
         cursor.execute(sql, (credentials,))
         
-        ( cred_id, shares, threshold, root_token, unseal_keys, recovery_keys ) = cursor.fetchone()
-                
+        ( cred_id, shares, threshold ) = cursor.fetchone()
+        # ( cred_id, shares, threshold, root_token, unseal_keys, recovery_keys ) = cursor.fetchone()
+
+        svault = self.client
+        
+        secret_version_response = svault.secrets.kv.v2.read_secret_version(
+            mount_point="secret", path=credentials
+        )
+        
+        unseal_keys = secret_version_response['data']['data']['unseal_keys']
+                                
         keys = json.loads(unseal_keys)
 
         # Unseal a Vault cluster with individual keys
