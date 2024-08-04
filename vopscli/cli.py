@@ -90,3 +90,12 @@ def vaultunseal(name):
     click.echo(vault.vault_unseal(name))
 
 cli.add_command(vaultunseal)
+
+@click.command()
+def vaultcreds():
+    "Move credentials from DB to vault"
+    vault = mv.ManagedVault()
+
+    click.echo(vault.vault_credentials())
+
+cli.add_command(vaultcreds)

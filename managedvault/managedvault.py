@@ -40,7 +40,7 @@ class ManagedVault:
         
         db = self.vaults
         db.execute('CREATE TABLE IF NOT EXISTS vaults (id TEXT PRIMARY KEY, url TEXT, credential TEXT, foreign key (credential) references credentials(id))')
-        db.execute('CREATE TABLE IF NOT EXISTS credentials (id TEXT PRIMARY KEY, shares INTEGER, threshold INTEGER, root_token TEXT, unseal_keys JSON, recovery_keys JSON)')
+        db.execute('CREATE TABLE IF NOT EXISTS credentials (id TEXT PRIMARY KEY, shares INTEGER, threshold INTEGER, root_token TEXT, vaulted_root_token TEXT, unseal_keys JSON, recovery_keys JSON, vaulted_unseal_keys TEXT, vaulted_recovery_keys TEXT)')
         db.close()
         return True
             
@@ -191,6 +191,26 @@ class ManagedVault:
                     
         return "Unsealed"
         
+    def vault_credentials(self):
+        """
+        Take credentials from the DB and place in vault.
+        
+        """
+        svault = self.client
+        
+        # Get all credentials vaules.
+        db = self.vaults
+        cursor = db.cursor()
+        sql = "SELECT id, root_token, unseal_keys, recovery_keys FROM credentials"
+        cursor.execute(sql)
+            
+        for cred_row in cursor.fetchall():
+            (id, root_token, unseal_keys, recovery_keys) = cred_row
+                            
+            create_response = svault.secrets.kv.v2.create_or_update_secret(mount_point="secret", path=id,
+                                                                           secret=[dict(root_token=root_token),dict(unseal_keys=unseal_keys),dict( recovery_keys=recovery_keys)])
+                
+        return "Keys Vaulted"           
         
 class Vault:
     """_summary_
