@@ -200,7 +200,51 @@ class ManagedVault:
             unseal_response1 = client.sys.submit_unseal_key(key)
                     
         return "Unsealed"
+        
+    def prune(self):
+        """
+        Remove credentials in DB and Vault that are not used.
+        
+        """
+        
+        db = self.vaults
+        cursor = db.cursor()
+        sql = "SELECT id, url, credential FROM vaults"
+        cursor.execute(sql)
+        
+        valid_creds = []
+        
+        vaults = cursor.fetchall()
+        for vault in vaults:
+   
+            ( id, url, credentials ) = vault
+        
+            client = hvac.Client(
+                url=url
+            )
+
+            if client.sys.is_initialized():
+                valid_creds.append(credentials)
                 
+        
+        db = self.vaults
+        cursor = db.cursor()
+        sql = "delete from credentials where credentials.id not in (select credential from vaults)"
+        cursor.execute(sql)
+        db.commit()
+        
+        list_response = self.client.secrets.kv.v2.list_secrets(
+            mount_point="secret", path="/",
+        )
+        
+        keys = list_response['data']['keys']
+        
+        for key in keys:
+            if key not in valid_creds:
+                print(f"Will delete {key}")
+                
+                create_response = self.client.secrets.kv.v2.delete_metadata_and_all_versions(mount_point="secret", path=key,)
+                        
 class Vault:
     """_summary_
     Vault class contains the defintion of the vault end point under management.

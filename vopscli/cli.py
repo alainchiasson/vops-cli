@@ -91,3 +91,11 @@ def vaultunseal(name):
 
 cli.add_command(vaultunseal)
 
+@click.command()
+def prune():
+    "Prune credentials in DB and Vault"
+    vault = mv.ManagedVault()
+
+    click.echo(vault.prune())
+
+cli.add_command(prune)
