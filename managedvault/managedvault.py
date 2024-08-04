@@ -40,7 +40,7 @@ class ManagedVault:
         
         db = self.vaults
         db.execute('CREATE TABLE IF NOT EXISTS vaults (id TEXT PRIMARY KEY, url TEXT, credential TEXT, foreign key (credential) references credentials(id))')
-        db.execute('CREATE TABLE IF NOT EXISTS credentials (id TEXT PRIMARY KEY, shares INTEGER, threshold INTEGER, root_token TEXT, vaulted_root_token TEXT, unseal_keys JSON, recovery_keys JSON, vaulted_unseal_keys TEXT, vaulted_recovery_keys TEXT)')
+        db.execute('CREATE TABLE IF NOT EXISTS credentials (id TEXT PRIMARY KEY, shares INTEGER, threshold INTEGER)')
         db.close()
         return True
             
@@ -128,15 +128,24 @@ class ManagedVault:
         
         root_token = result['root_token']
         keys = result['keys']
+
+        unseal_keys = json.dumps(keys)
+        recovery_keys = json.dumps(None)
         
         # Hack to get a string.
         cred_id = str(uuid.uuid4())
         
         db = self.vaults
         cursor = db.cursor()
-        sql = "INSERT INTO credentials(id, shares, threshold, root_token, unseal_keys) VALUES( ?, ?, ?, ?, ? )"
-        cursor.execute(sql, (cred_id, shares, threshold, root_token, json.dumps(keys)))
+        sql = "INSERT INTO credentials(id, shares, threshold ) VALUES( ?, ?, ? )"
+        cursor.execute(sql, (cred_id, shares, threshold))
         db.commit()
+
+        svault = self.client
+                            
+        create_response = svault.secrets.kv.v2.create_or_update_secret(mount_point="secret", path=cred_id,
+                                                                           secret=[dict(root_token=root_token),dict(unseal_keys=unseal_keys),dict( recovery_keys=recovery_keys)])
+                
 
         # Update current Vault config with cred link.
         
