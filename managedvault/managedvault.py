@@ -140,15 +140,11 @@ class ManagedVault:
         sql = "INSERT INTO credentials(id, shares, threshold ) VALUES( ?, ?, ? )"
         cursor.execute(sql, (cred_id, shares, threshold))
         db.commit()
-
-        svault = self.client
-                            
-        create_response = svault.secrets.kv.v2.create_or_update_secret(mount_point="secret", path=cred_id,
+                                   
+        create_response = self.client.secrets.kv.v2.create_or_update_secret(mount_point="secret", path=cred_id,
                                                                            secret=[dict(root_token=root_token),dict(unseal_keys=unseal_keys),dict( recovery_keys=recovery_keys)])
-                
 
         # Update current Vault config with cred link.
-        
         db = self.vaults
         cursor = db.cursor()
         sql = "UPDATE vaults SET credential = ? WHERE id = ?"
@@ -188,20 +184,15 @@ class ManagedVault:
         db = self.vaults
         cursor = db.cursor()
         sql = "SELECT id, shares, threshold FROM credentials WHERE id = ?"
-        # sql = "SELECT id, shares, threshold, root_token, unseal_keys, recovery_keys FROM credentials WHERE id = ?"
         cursor.execute(sql, (credentials,))
         
         ( cred_id, shares, threshold ) = cursor.fetchone()
-        # ( cred_id, shares, threshold, root_token, unseal_keys, recovery_keys ) = cursor.fetchone()
-
-        svault = self.client
         
-        secret_version_response = svault.secrets.kv.v2.read_secret_version(
+        secret_version_response = self.client.secrets.kv.v2.read_secret_version(
             mount_point="secret", path=credentials
         )
         
         unseal_keys = secret_version_response['data']['data']['unseal_keys']
-                                
         keys = json.loads(unseal_keys)
 
         # Unseal a Vault cluster with individual keys
@@ -209,28 +200,7 @@ class ManagedVault:
             unseal_response1 = client.sys.submit_unseal_key(key)
                     
         return "Unsealed"
-        
-    def vault_credentials(self):
-        """
-        Take credentials from the DB and place in vault.
-        
-        """
-        svault = self.client
-        
-        # Get all credentials vaules.
-        db = self.vaults
-        cursor = db.cursor()
-        sql = "SELECT id, root_token, unseal_keys, recovery_keys FROM credentials"
-        cursor.execute(sql)
-            
-        for cred_row in cursor.fetchall():
-            (id, root_token, unseal_keys, recovery_keys) = cred_row
-                            
-            create_response = svault.secrets.kv.v2.create_or_update_secret(mount_point="secret", path=id,
-                                                                           secret=[dict(root_token=root_token),dict(unseal_keys=unseal_keys),dict( recovery_keys=recovery_keys)])
                 
-        return "Keys Vaulted"           
-        
 class Vault:
     """_summary_
     Vault class contains the defintion of the vault end point under management.
