@@ -93,7 +93,7 @@ class ManagedVault:
         if not client.sys.is_initialized():
             return "Not Initialized"
         
-        if not client.sys.is_sealed():
+        if client.sys.is_sealed():
             return "Initialised but Sealed"
         
         return "Initialised and Unselaed"
@@ -149,6 +149,47 @@ class ManagedVault:
         
         return "Initialised"
         
+    def vault_unseal(self, name):
+        """Unseal a vault system while recording the credentials.
+
+        Args:
+            name (_type_): Name of the systems to unseal.
+        """
+        
+        # Get Vault URL
+        db = self.vaults
+        cursor = db.cursor()
+        sql = "SELECT * FROM vaults WHERE id = ?"
+        cursor.execute(sql, (name,))
+        
+        ( id, url, credentials ) = cursor.fetchone()
+        
+        client = hvac.Client(
+            url=url
+        )
+
+        if not client.sys.is_initialized():
+            return "Non Initialised, Initialise first"
+
+        if not client.sys.is_sealed():
+            return "Already Unsealed"
+        
+        # Fetch the credentials from the DB
+        
+        db = self.vaults
+        cursor = db.cursor()
+        sql = "SELECT id, shares, threshold, root_token, unseal_keys, recovery_keys FROM credentials WHERE id = ?"
+        cursor.execute(sql, (credentials,))
+        
+        ( cred_id, shares, threshold, root_token, unseal_keys, recovery_keys ) = cursor.fetchone()
+                
+        keys = json.loads(unseal_keys)
+
+        # Unseal a Vault cluster with individual keys
+        for key in keys[:threshold]:
+            unseal_response1 = client.sys.submit_unseal_key(key)
+                    
+        return "Unsealed"
         
         
 class Vault:

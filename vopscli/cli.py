@@ -74,9 +74,19 @@ cli.add_command(vaultstatus)
 @click.command()
 @click.argument("name")
 def vaultinit(name):
-    "Show Status of Vault"
+    "Init named Vault"
     vault = mv.ManagedVault()
 
     click.echo(vault.vault_init(name))
 
 cli.add_command(vaultinit)
+
+@click.command()
+@click.argument("name")
+def vaultunseal(name):
+    "Unseal Named Vault"
+    vault = mv.ManagedVault()
+
+    click.echo(vault.vault_unseal(name))
+
+cli.add_command(vaultunseal)
