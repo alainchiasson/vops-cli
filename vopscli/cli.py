@@ -1,6 +1,7 @@
 import click
-import managedvault as mv
+import managedvault
 
+vault = managedvault.ManagedVault()
 
 @click.group()
 @click.version_option()
@@ -20,7 +21,6 @@ cli.add_command(show)
 @click.command()
 def status():
     "Show Application status"
-    vault = mv.ManagedVault()
     click.echo("Verifying Vault connection  ...  ", nl=False)
     if vault.secret_store_connected():
         click.echo("Authenticated")
@@ -44,8 +44,6 @@ cli.add_command(status)
 @click.command()
 def list():
     "List managed vaults"
-    vault = mv.ManagedVault()
-
     vault.list_vaults()
     
 cli.add_command(list)
@@ -55,8 +53,6 @@ cli.add_command(list)
 @click.argument("url")
 def addvault(name, url):
     "List managed vaults"
-    vault = mv.ManagedVault()
-
     vault.vault_add(name, url)
 
 cli.add_command(addvault)
@@ -65,8 +61,6 @@ cli.add_command(addvault)
 @click.argument("name")
 def vaultstatus(name):
     "Show Status of Vault"
-    vault = mv.ManagedVault()
-
     click.echo(vault.vault_status(name))
 
 cli.add_command(vaultstatus)
@@ -75,8 +69,6 @@ cli.add_command(vaultstatus)
 @click.argument("name")
 def vaultinit(name):
     "Init named Vault"
-    vault = mv.ManagedVault()
-
     click.echo(vault.vault_init(name))
 
 cli.add_command(vaultinit)
@@ -85,8 +77,6 @@ cli.add_command(vaultinit)
 @click.argument("name")
 def vaultunseal(name):
     "Unseal Named Vault"
-    vault = mv.ManagedVault()
-
     click.echo(vault.vault_unseal(name))
 
 cli.add_command(vaultunseal)
@@ -94,8 +84,6 @@ cli.add_command(vaultunseal)
 @click.command()
 def prune():
     "Prune credentials in DB and Vault"
-    vault = mv.ManagedVault()
-
     click.echo(vault.prune())
 
 cli.add_command(prune)
