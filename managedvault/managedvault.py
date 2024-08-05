@@ -32,6 +32,11 @@ class AppStorage:
     
     def __init__(self):
         
+        """ 
+        Defines object nad creates DB file if not present.
+        Will also create required teables if not already created.
+        """
+        
         filename = (os.path.join(os.path.dirname(__file__), config.dblink))
         self.appStorage = sqlite3.connect(filename)
         
@@ -42,7 +47,84 @@ class AppStorage:
     
     def data_store_connected(self):
         return self.appStorage.total_changes == 0
+    
+    def vault_list(self):
+        """_summary_
+        List Vault undermanagement
+        """
+        
+        db = self.appStorage
+        cursor = db.cursor()
+        sql = "SELECT id, url FROM vaults"
+        cursor.execute(sql)
+        
+        vaults = cursor.fetchall()
+        
+        return vaults            
 
+
+    def vault_add(self, name, url):
+        """
+        Adds a vault end point to be managed
+        """
+        db = self.appStorage
+        cursor = db.cursor()
+        sql = "INSERT INTO vaults(id, url, credential) VALUES( ?, ?, ? )"
+        cursor.execute(sql, (name, url, 'NULL'))
+        db.commit()
+        
+        return True
+  
+    def get_vault_by_name(self, name):
+        
+        db = self.appStorage
+        cursor = db.cursor()
+        sql = "SELECT * FROM vaults WHERE id = ?"
+        cursor.execute(sql, (name,))
+        
+        vault = cursor.fetchone()
+        
+        return vault
+
+
+    def store_cred_entry(self, shares, threshold):
+        
+        # Hack to get a string.
+        cred_id = str(uuid.uuid4())
+
+        db = self.appStorage
+        cursor = db.cursor()
+        sql = "INSERT INTO credentials(id, shares, threshold ) VALUES( ?, ?, ? )"
+        cursor.execute(sql, (cred_id, shares, threshold))
+        db.commit()
+        
+        return cred_id
+    
+    def link_vault_to_cred(self, name, cred_id):
+        
+        db = self.appStorage
+        cursor = db.cursor()
+        sql = "UPDATE vaults SET credential = ? WHERE id = ?"
+        cursor.execute(sql, (cred_id, name))
+        
+        db.commit()
+        
+        return True
+
+    def get_cred_attributes(self, cred_id):
+        
+        # Fetch the credentials from the DB
+        
+        db = self.appStorage
+        cursor = db.cursor()
+        sql = "SELECT id, shares, threshold FROM credentials WHERE id = ?"
+        cursor.execute(sql, (cred_id,))
+        
+        cred = cursor.fetchone()
+        
+        return cred
+    
+        
 class ManagedVault:
         
     def __init__(self):
@@ -65,10 +147,6 @@ class ManagedVault:
             validate that data is present 
             and create if it is not """
         
-        db = self.vaults
-        db.execute('CREATE TABLE IF NOT EXISTS vaults (id TEXT PRIMARY KEY, url TEXT, credential TEXT, foreign key (credential) references credentials(id))')
-        db.execute('CREATE TABLE IF NOT EXISTS credentials (id TEXT PRIMARY KEY, shares INTEGER, threshold INTEGER)')
-        db.close()
         return True
             
     def secret_store_connected(self):
@@ -77,26 +155,19 @@ class ManagedVault:
     def data_store_connected(self):
         return self.vaults.total_changes == 0
     
-    def list_vaults(self):
+    def list(self):
         """_summary_
         List Vault undermanagement
         """
-        
-        db = self.vaults
-        cursor = db.cursor()
-        sql = "SELECT id, url FROM vaults"
-        cursor.execute(sql)
-        print(cursor.fetchall())
 
+        return self.storage.vault_list()
+        
     def vault_add(self, name, url):
         """
         Adds a vault end point to be managed
         """
-        db = self.vaults
-        cursor = db.cursor()
-        sql = "INSERT INTO vaults(id, url, credential) VALUES( ?, ?, ? )"
-        cursor.execute(sql, (name, url, 'NULL'))
-        db.commit()
+        
+        return self.storage.vault_add(name, url)
     
     def vault_status(self, name):
         """_summary_
@@ -106,12 +177,8 @@ class ManagedVault:
         Args:
             name (_type_): The NAME used to revference.
         """
-        db = self.vaults
-        cursor = db.cursor()
-        sql = "SELECT * FROM vaults WHERE id = ?"
-        cursor.execute(sql, (name,))
-        
-        ( id, url, credentials ) = cursor.fetchone()
+       
+        ( id, url, credentials ) = self.storage.get_vault_by_name(name)
         
         client = hvac.Client(
             url=url
@@ -132,13 +199,7 @@ class ManagedVault:
             name (_type_): Name of the systems to initialise.
         """
         
-        # Get Vault URL
-        db = self.vaults
-        cursor = db.cursor()
-        sql = "SELECT * FROM vaults WHERE id = ?"
-        cursor.execute(sql, (name,))
-        
-        ( id, url, credentials ) = cursor.fetchone()
+        ( id, url, credentials ) = self.storage.get_vault_by_name(name)
         
         client = hvac.Client(
             url=url
@@ -159,25 +220,14 @@ class ManagedVault:
         unseal_keys = json.dumps(keys)
         recovery_keys = json.dumps(None)
         
-        # Hack to get a string.
-        cred_id = str(uuid.uuid4())
+        cred_id = self.storage.store_cred_entry(shares, threshold)
         
-        db = self.vaults
-        cursor = db.cursor()
-        sql = "INSERT INTO credentials(id, shares, threshold ) VALUES( ?, ?, ? )"
-        cursor.execute(sql, (cred_id, shares, threshold))
-        db.commit()
-                                   
         create_response = self.client.secrets.kv.v2.create_or_update_secret(mount_point="secret", path=cred_id,
                                                                            secret=[dict(root_token=root_token),dict(unseal_keys=unseal_keys),dict( recovery_keys=recovery_keys)])
 
         # Update current Vault config with cred link.
-        db = self.vaults
-        cursor = db.cursor()
-        sql = "UPDATE vaults SET credential = ? WHERE id = ?"
-        cursor.execute(sql, (cred_id, name))
         
-        db.commit()
+        self.storage.link_vault_to_cred(name, cred_id)
         
         return "Initialised"
         
@@ -188,13 +238,7 @@ class ManagedVault:
             name (_type_): Name of the systems to unseal.
         """
         
-        # Get Vault URL
-        db = self.vaults
-        cursor = db.cursor()
-        sql = "SELECT * FROM vaults WHERE id = ?"
-        cursor.execute(sql, (name,))
-        
-        ( id, url, credentials ) = cursor.fetchone()
+        ( id, url, credentials ) = self.storage.get_vault_by_name(name)
         
         client = hvac.Client(
             url=url
@@ -206,14 +250,15 @@ class ManagedVault:
         if not client.sys.is_sealed():
             return "Already Unsealed"
         
-        # Fetch the credentials from the DB
+        # # Fetch the credentials from the DB
         
-        db = self.vaults
-        cursor = db.cursor()
-        sql = "SELECT id, shares, threshold FROM credentials WHERE id = ?"
-        cursor.execute(sql, (credentials,))
+        # db = self.vaults
+        # cursor = db.cursor()
+        # sql = "SELECT id, shares, threshold FROM credentials WHERE id = ?"
+        # cursor.execute(sql, (credentials,))
         
-        ( cred_id, shares, threshold ) = cursor.fetchone()
+        # ( cred_id, shares, threshold ) = cursor.fetchone()
+        ( cred_id, shares, threshold ) = self.storage.get_cred_attributes(credentials)
         
         secret_version_response = self.client.secrets.kv.v2.read_secret_version(
             mount_point="secret", path=credentials
