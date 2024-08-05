@@ -327,6 +327,55 @@ class ManagedVault:
         
         return f"Removed config {name}"
 
+    def genroot(self, name):
+        """Unseal a vault system while recording the credentials.
+
+        Args:
+            name (_type_): Name of the systems to unseal.
+        """
+        
+        ( id, url, credentials ) = self.storage.get_vault_by_name(name)
+        ( cred_id, shares, threshold ) = self.storage.get_cred_attributes(credentials)
+        
+        secret_version_response = self.client.secrets.kv.v2.read_secret_version(
+            mount_point="secret", path=credentials
+        )
+        
+        unseal_keys = secret_version_response['data']['data']['unseal_keys']
+        keys = json.loads(unseal_keys)
+
+        client = hvac.Client(
+            url=url
+        )
+                
+        start_generate_root_response = client.sys.start_root_token_generation()
+        
+        # Keep info        
+        otp = start_generate_root_response['otp']
+        nonce = start_generate_root_response['nonce']
+        last_response = ""
+        
+        print(f"OTP: {otp}")
+        # Use keys to advance.
+        for key in keys[:threshold]:            
+            last_response = client.sys.generate_root(
+                key=key,
+                nonce=nonce
+            )
+            
+        encoded_token = last_response['encoded_root_token']
+
+        # No explicit functions to decode.        
+        result = client.write_data(path='sys/decode-token', data=dict(otp=otp, encoded_token=encoded_token))
+        token = result['data']['token']
+                
+        # write root token back
+        secret_version_response = self.client.secrets.kv.v2.patch(
+            mount_point="secret", path=credentials, secret=dict(root_token=token)
+        )
+
+        return "New Root generated and stored"
+
 
     def prune(self):
         """

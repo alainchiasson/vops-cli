@@ -108,3 +108,11 @@ def remove(name):
     click.echo(vaults.vault_remove(name))
 
 cli.add_command(remove)
+
+@click.command()
+@click.argument("name")
+def genroot(name):
+    "Remove a managed vault"
+    click.echo(vaults.genroot(name))
+
+cli.add_command(genroot)
