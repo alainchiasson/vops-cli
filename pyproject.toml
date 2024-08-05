@@ -1,6 +1,6 @@
 [project]
 name = "vopscli"
-version = "0.1"
+version = "0.99"
 description = "Vault Operations CLI"
 readme = "README.md"
 authors = [{name = "Alain Chiasson"}]
