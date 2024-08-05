@@ -200,7 +200,22 @@ class ManagedVault:
             unseal_response1 = client.sys.submit_unseal_key(key)
                     
         return "Unsealed"
+
+    def vault_remove(self, name):
+        """
+        Remove a vault from the configuration.
         
+        """
+
+        db = self.vaults
+        cursor = db.cursor()
+        sql = "delete FROM vaults WHERE id = ?"
+        cursor.execute(sql, (name,))
+        db.commit()
+        
+        return f"Removed config {name}"
+
+
     def prune(self):
         """
         Remove credentials in DB and Vault that are not used.

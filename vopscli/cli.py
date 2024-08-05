@@ -87,3 +87,11 @@ def prune():
     click.echo(vault.prune())
 
 cli.add_command(prune)
+
+@click.command()
+@click.argument("name")
+def removevault(name):
+    "Remove a managed vault"
+    vault.vault_remove(name)
+
+cli.add_command(removevault)
