@@ -101,6 +101,6 @@ cli.add_command(prune)
 @click.argument("name")
 def removevault(name):
     "Remove a managed vault"
-    vaults.vault_remove(name)
+    click.echo(vaults.vault_remove(name))
 
 cli.add_command(removevault)

@@ -75,6 +75,21 @@ class AppStorage:
         
         return True
   
+    def get_all_vaults(self):
+        """_summary_
+        List Vault undermanagement
+        """
+        
+        db = self.appStorage
+        cursor = db.cursor()
+        sql = "SELECT id, url, credential FROM vaults"
+        cursor.execute(sql)
+        
+        vaults = cursor.fetchall()
+        
+        return vaults            
+
+
     def get_vault_by_name(self, name):
         
         db = self.appStorage
@@ -111,6 +126,17 @@ class AppStorage:
         
         return True
 
+    def clear_vault_creds(self, name):
+        
+        db = self.appStorage
+        cursor = db.cursor()
+        sql = "UPDATE vaults SET credential = 'NULL' WHERE id = ?"
+        cursor.execute(sql, (name,))
+        
+        db.commit()
+        
+        return True
+
     def get_cred_attributes(self, cred_id):
         
         # Fetch the credentials from the DB
@@ -123,8 +149,27 @@ class AppStorage:
         cred = cursor.fetchone()
         
         return cred
-    
+
+    def delete_unused_creds(self):
         
+        db = self.appStorage
+        cursor = db.cursor()
+        sql = "delete from credentials where credentials.id not in (select credential from vaults)"
+        cursor.execute(sql)
+        db.commit()
+        
+        return True
+        
+    def remove_vault_by_name(self, name):
+
+        db = self.appStorage
+        cursor = db.cursor()
+        sql = "delete FROM vaults WHERE id = ?"
+        cursor.execute(sql, (name,))
+        db.commit()
+        
+        return True
+                
 class ManagedVault:
         
     def __init__(self):
@@ -250,14 +295,6 @@ class ManagedVault:
         if not client.sys.is_sealed():
             return "Already Unsealed"
         
-        # # Fetch the credentials from the DB
-        
-        # db = self.vaults
-        # cursor = db.cursor()
-        # sql = "SELECT id, shares, threshold FROM credentials WHERE id = ?"
-        # cursor.execute(sql, (credentials,))
-        
-        # ( cred_id, shares, threshold ) = cursor.fetchone()
         ( cred_id, shares, threshold ) = self.storage.get_cred_attributes(credentials)
         
         secret_version_response = self.client.secrets.kv.v2.read_secret_version(
@@ -278,12 +315,8 @@ class ManagedVault:
         Remove a vault from the configuration.
         
         """
-
-        db = self.vaults
-        cursor = db.cursor()
-        sql = "delete FROM vaults WHERE id = ?"
-        cursor.execute(sql, (name,))
-        db.commit()
+        
+        self.storage.remove_vault_by_name(name)
         
         return f"Removed config {name}"
 
@@ -294,31 +327,24 @@ class ManagedVault:
         
         """
         
-        db = self.vaults
-        cursor = db.cursor()
-        sql = "SELECT id, url, credential FROM vaults"
-        cursor.execute(sql)
-        
         valid_creds = []
         
-        vaults = cursor.fetchall()
+        vaults = self.storage.get_all_vaults()
         for vault in vaults:
    
             ( id, url, credentials ) = vault
         
+            # Test if initialised.
             client = hvac.Client(
                 url=url
             )
 
             if client.sys.is_initialized():
                 valid_creds.append(credentials)
+            else:
+                self.storage.clear_vault_creds(id)
                 
-        
-        db = self.vaults
-        cursor = db.cursor()
-        sql = "delete from credentials where credentials.id not in (select credential from vaults)"
-        cursor.execute(sql)
-        db.commit()
+        self.storage.delete_unused_creds()
         
         list_response = self.client.secrets.kv.v2.list_secrets(
             mount_point="secret", path="/",
