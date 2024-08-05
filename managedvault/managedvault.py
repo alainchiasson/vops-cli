@@ -23,6 +23,26 @@ class _Config:
 
 config = _Config()
 
+class AppStorage:
+    """Maintinas the storage for the application
+
+    Returns:
+        _type_: _description_
+    """
+    
+    def __init__(self):
+        
+        filename = (os.path.join(os.path.dirname(__file__), config.dblink))
+        self.appStorage = sqlite3.connect(filename)
+        
+        # Create Tables if not included. (NOTE: we will move this to a better management class later)
+        db = self.appStorage
+        db.execute('CREATE TABLE IF NOT EXISTS vaults (id TEXT PRIMARY KEY, url TEXT, credential TEXT, foreign key (credential) references credentials(id))')
+        db.execute('CREATE TABLE IF NOT EXISTS credentials (id TEXT PRIMARY KEY, shares INTEGER, threshold INTEGER)')
+    
+    def data_store_connected(self):
+        return self.appStorage.total_changes == 0
+
 class ManagedVault:
         
     def __init__(self):
@@ -31,7 +51,14 @@ class ManagedVault:
             url=config.vault_addr,
             token=config.vault_token
         )
-        self.vaults = sqlite3.connect((os.path.join(os.path.dirname(__file__), config.dblink)))
+        self.storage = AppStorage()
+        self.vaults = self.storage.appStorage
+
+        
+    def status(self):
+        
+        if self.storage.data_store_connected():
+            return f"Verified Database storage"
         
     def verify_and_init(self):
         """ This will verify connectivty to endpoints
