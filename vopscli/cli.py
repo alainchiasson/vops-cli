@@ -21,6 +21,14 @@ cli.add_command(show)
 @click.command()
 def status():
     "Show Application status"
+    click.echo(vault.status())
+
+cli.add_command(status)
+
+
+@click.command()
+def test():
+    "Show Application status"
     click.echo("Verifying Vault connection  ...  ", nl=False)
     if vault.secret_store_connected():
         click.echo("Authenticated")
@@ -39,7 +47,7 @@ def status():
     else:
         click.echo("Error")
 
-cli.add_command(status)
+cli.add_command(test)
         
 @click.command()
 def list():
