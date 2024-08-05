@@ -242,7 +242,7 @@ class ManagedVault:
         if client.sys.is_sealed():
             return "Initialised but Sealed"
         
-        return "Initialised and Unselaed"
+        return "Initialised and Unsealed"
     
     def vault_init(self, name):
         """Initialisze a vault system while recording the credentials.
