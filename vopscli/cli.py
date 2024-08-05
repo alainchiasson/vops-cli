@@ -12,18 +12,20 @@ def cli():
 @click.command()
 def show():
     "Show the configuration"
-    click.echo(mv.config.vault_addr)
-    click.echo(mv.config.vault_token)
-    click.echo(mv.config.dblink)
+    conf = vaults.show()
+    
+    click.echo(conf.vault_addr)
+    click.echo(conf.vault_token)
+    click.echo(conf.dblink)
 
 cli.add_command(show)
 
 @click.command()
-def status():
+def appstatus():
     "Show Application status"
     click.echo(vaults.status())
 
-cli.add_command(status)
+cli.add_command(appstatus)
 
 
 @click.command()
@@ -52,43 +54,45 @@ cli.add_command(test)
 @click.command()
 def list():
     "List managed vaults"
+    click.echo(f"{'Name':20} URL")
     for vault in vaults.list():
-        click.echo(vault)
+        ( name, url ) = vault
+        click.echo(f"{name:20} {url}")
     
 cli.add_command(list)
 
 @click.command()
 @click.argument("name")
 @click.argument("url")
-def addvault(name, url):
+def add(name, url):
     "List managed vaults"
     vaults.vault_add(name, url)
 
-cli.add_command(addvault)
+cli.add_command(add)
 
 @click.command()
 @click.argument("name")
-def vaultstatus(name):
+def status(name):
     "Show Status of Vault"
     click.echo(vaults.vault_status(name))
 
-cli.add_command(vaultstatus)
+cli.add_command(status)
 
 @click.command()
 @click.argument("name")
-def vaultinit(name):
+def init(name):
     "Init named Vault"
     click.echo(vaults.vault_init(name))
 
-cli.add_command(vaultinit)
+cli.add_command(init)
 
 @click.command()
 @click.argument("name")
-def vaultunseal(name):
+def unseal(name):
     "Unseal Named Vault"
     click.echo(vaults.vault_unseal(name))
 
-cli.add_command(vaultunseal)
+cli.add_command(unseal)
 
 @click.command()
 def prune():
@@ -99,8 +103,8 @@ cli.add_command(prune)
 
 @click.command()
 @click.argument("name")
-def removevault(name):
+def remove(name):
     "Remove a managed vault"
     click.echo(vaults.vault_remove(name))
 
-cli.add_command(removevault)
+cli.add_command(remove)

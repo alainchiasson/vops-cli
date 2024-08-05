@@ -182,6 +182,13 @@ class ManagedVault:
         self.vaults = self.storage.appStorage
 
         
+    def show(self):
+        
+        """return the configuration information
+        """
+        
+        return config
+    
     def status(self):
         
         if self.storage.data_store_connected():
