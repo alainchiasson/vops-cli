@@ -1,5 +1,6 @@
 import click
 import managedvault
+from prettytable import PrettyTable
 
 vaults = managedvault.ManagedVault()
 
@@ -116,3 +117,29 @@ def genroot(name):
     click.echo(vaults.genroot(name))
 
 cli.add_command(genroot)
+
+@click.command()
+@click.argument("name")
+def findroot(name):
+    "Find all root tokens for a managed vault"
+    
+    roots = PrettyTable()
+    roots.field_names = ["Display Name", "Creation Time", "Expiration Time", "Policies", "Token Accessor"]
+    roots.add_rows(vaults.findroot(name))
+
+    click.echo(roots)
+
+cli.add_command(findroot)
+
+@click.command()
+@click.argument("name")
+def revokeroot(name):
+    "Find all root tokens for a managed vault"
+
+    roots = PrettyTable()
+    roots.field_names = ["Display Name", "Creation Time", "Expiration Time", "Policies", "Token Accessor"]
+    roots.add_rows(vaults.revokeroot(name))
+
+    click.echo(roots)
+
+cli.add_command(revokeroot)

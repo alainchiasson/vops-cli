@@ -5,6 +5,7 @@ import uuid
 import hvac
 import sqlite3
 import json
+import time
 
 
 class _Config:
@@ -327,6 +328,91 @@ class ManagedVault:
         
         return f"Removed config {name}"
 
+
+    def findroot(self, name):
+        """Unseal a vault system while recording the credentials.
+
+        Args:
+            name (_type_): Name of the systems to unseal.
+        """
+
+        ( id, url, credentials ) = self.storage.get_vault_by_name(name)
+        ( cred_id, shares, threshold ) = self.storage.get_cred_attributes(credentials)
+
+        secret_version_response = self.client.secrets.kv.v2.read_secret_version(
+            mount_point="secret", path=credentials
+        )
+
+        root_token = secret_version_response['data']['data']['root_token']
+
+        client = hvac.Client(
+            url=url,
+            token=root_token
+        )
+        
+        payload = client.list('auth/token/accessors')
+        keys = payload['data']['keys']
+
+        root_accessors = []
+
+        for key in keys:
+            output = client.lookup_token(key, accessor=True)
+            display_name = output['data']['display_name']
+            creation_date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(output['data']['creation_time']))
+            expire_time = output['data']['expire_time']
+            policies = output['data']['policies']
+            accessor = key
+            if "root" in policies:
+                root_accessors.append([display_name, creation_date, expire_time, policies, accessor])
+        
+        return root_accessors
+
+
+    def revokeroot(self, name):
+        """Unseal a vault system while recording the credentials.
+
+        Args:
+            name (_type_): Name of the systems to unseal.
+        """
+
+        ( id, url, credentials ) = self.storage.get_vault_by_name(name)
+        ( cred_id, shares, threshold ) = self.storage.get_cred_attributes(credentials)
+
+        secret_version_response = self.client.secrets.kv.v2.read_secret_version(
+            mount_point="secret", path=credentials
+        )
+
+        root_token = secret_version_response['data']['data']['root_token']
+
+        client = hvac.Client(
+            url=url,
+            token=root_token
+        )
+        
+        # So I don't delete my own access
+        mySelf = client.auth.token.lookup_self()
+        myAccessor = mySelf['data']['accessor']
+
+        # get all accessors, but remove the one I am using.
+        payload = client.list('auth/token/accessors')
+        keys = payload['data']['keys']
+        keys.remove(myAccessor)
+
+        revoked_accessors = []
+
+        for key in keys:
+            output = client.lookup_token(key, accessor=True)
+            display_name = output['data']['display_name']
+            creation_date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(output['data']['creation_time']))
+            expire_time = output['data']['expire_time']
+            policies = output['data']['policies']
+            accessor = key
+            if "root" in policies:
+                client.write_data('auth/token/revoke-accessor', data = dict(accessor=accessor))
+                revoked_accessors.append([display_name, creation_date, expire_time, policies, accessor])
+        
+        return revoked_accessors
+
     def genroot(self, name):
         """Unseal a vault system while recording the credentials.
 
@@ -355,7 +441,6 @@ class ManagedVault:
         nonce = start_generate_root_response['nonce']
         last_response = ""
         
-        print(f"OTP: {otp}")
         # Use keys to advance.
         for key in keys[:threshold]:            
             last_response = client.sys.generate_root(
@@ -374,7 +459,7 @@ class ManagedVault:
             mount_point="secret", path=credentials, secret=dict(root_token=token)
         )
 
-        return "New Root generated and stored"
+        return token
 
 
     def prune(self):
