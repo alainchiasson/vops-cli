@@ -1,1 +1,1 @@
-from .managedvault import ManagedVault, config
+from .managedvault import AppStorage, ManagedVault, config
