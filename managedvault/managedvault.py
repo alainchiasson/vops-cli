@@ -101,8 +101,7 @@ class AppStorage:
         vault = cursor.fetchone()
         
         return vault
-
-
+       
     def store_cred_entry(self, shares, threshold):
         
         # Hack to get a string.

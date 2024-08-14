@@ -11,15 +11,15 @@ def cli():
 
 
 @click.command()
-def show():
-    "Show the configuration"
+def appshow():
+    "Display the current application config."
     conf = vaults.show()
     
     click.echo(conf.vault_addr)
     click.echo(conf.vault_token)
     click.echo(conf.dblink)
 
-cli.add_command(show)
+cli.add_command(appshow)
 
 @click.command()
 def appstatus():
@@ -66,7 +66,7 @@ cli.add_command(list)
 @click.argument("name")
 @click.argument("url")
 def add(name, url):
-    "List managed vaults"
+    "Add a managed vault config"
     vaults.vault_add(name, url)
 
 cli.add_command(add)
@@ -121,7 +121,7 @@ cli.add_command(genroot)
 @click.command()
 @click.argument("name")
 def findroot(name):
-    "Find all root tokens for a managed vault"
+    "List accessors of tokens with root priveledge for a vault"
     
     roots = PrettyTable()
     roots.field_names = ["Display Name", "Creation Time", "Expiration Time", "Policies", "Token Accessor"]
@@ -134,7 +134,7 @@ cli.add_command(findroot)
 @click.command()
 @click.argument("name")
 def revokeroot(name):
-    "Find all root tokens for a managed vault"
+    "Revoke all tokens with root priveledge for a vault"
 
     roots = PrettyTable()
     roots.field_names = ["Display Name", "Creation Time", "Expiration Time", "Policies", "Token Accessor"]
