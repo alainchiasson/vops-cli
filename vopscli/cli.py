@@ -96,6 +96,14 @@ def unseal(name):
 cli.add_command(unseal)
 
 @click.command()
+@click.argument("name")
+def rekey(name):
+    "rekey named Vault"
+    click.echo(vaults.rekey(name))
+
+cli.add_command(rekey)
+
+@click.command()
 def prune():
     "Prune credentials in DB and Vault"
     click.echo(vaults.prune())
