@@ -461,6 +461,59 @@ class ManagedVault:
         return token
 
 
+    def rekey(self, name):
+        """Rotate create new unseal keys.
+
+        Args:
+            name (_type_): Name of the systems to unseal.
+        """
+        
+        ( id, url, credentials ) = self.storage.get_vault_by_name(name)
+        ( cred_id, shares, threshold ) = self.storage.get_cred_attributes(credentials)
+        
+        secret_version_response = self.client.secrets.kv.v2.read_secret_version(
+            mount_point="secret", path=credentials
+        )
+        
+        unseal_keys = secret_version_response['data']['data']['unseal_keys']
+        keys = json.loads(unseal_keys)
+
+        client = hvac.Client(
+            url=url
+        )
+        
+        # Start rekey process
+        shares = 5
+        threshold = 3
+ 
+        start_rekey_response = client.sys.start_rekey(
+                                            secret_shares=shares, 
+                                            secret_threshold=threshold,
+                                            require_verification=False
+                                        )
+
+        
+                
+        # Keep info        
+        nonce = start_rekey_response['nonce']
+        last_response = ""
+        
+        # Use keys to advance.
+        for key in keys[:threshold]:            
+            last_response = client.sys.rekey(
+                key=key,
+                nonce=nonce
+            )
+            
+        keys = last_response['keys']
+        unseal_keys = json.dumps(keys)
+                 
+        # write back new unseal keys
+        secret_version_response = self.client.secrets.kv.v2.patch(
+            mount_point="secret", path=credentials, secret=dict(unseal_keys=unseal_keys)
+        )
+
+
     def prune(self):
         """
         Remove credentials in DB and Vault that are not used.

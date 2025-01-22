@@ -1,5 +1,5 @@
 ui            = true
-api_addr      = "https://127.0.0.1:8300"
+api_addr      = "https://127.0.0.1:8310"
 disable_mlock = true
 
 storage "file" {
@@ -7,7 +7,7 @@ storage "file" {
 }
 
 listener "tcp" {
-  address       = "127.0.0.1:8300"
+  address       = "127.0.0.1:8310"
   tls_disable   = 1
 }
 
